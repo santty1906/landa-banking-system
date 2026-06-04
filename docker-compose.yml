@@ -13,11 +13,11 @@ services:
 
   backend:
     build:
-      context: /tmp/workspace/santty1906/LandaProject/backend
+      context: ./backend
       dockerfile: Dockerfile
     container_name: landa_backend
     env_file:
-      - /tmp/workspace/santty1906/LandaProject/backend/.env.example
+      - ./backend/.env
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:

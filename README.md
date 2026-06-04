@@ -16,7 +16,7 @@ Monorepo scaffold for a mobile banking Software Quality project.
 3. Start local services with Docker
 4. Run backend and frontend locally
 
-See `/tmp/workspace/santty1906/LandaProject/docs/setup.md` for full setup steps.
+See `docs/setup.md` for full setup steps.
 
 ## Status
 
