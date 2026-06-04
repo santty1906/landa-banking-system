@@ -47,6 +47,16 @@ class InfrastructureError(AppError):
         )
 
 
+class ValidationAppError(AppError):
+    def __init__(self, message: str = "Validation failed", *, details: dict | None = None) -> None:
+        super().__init__(
+            message,
+            error_code="APP_VALIDATION_ERROR",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            details=details,
+        )
+
+
 def _build_error_payload(request: Request, error_code: str, message: str, details: dict | None = None) -> dict:
     request_id = getattr(request.state, "request_id", "-")
     return {

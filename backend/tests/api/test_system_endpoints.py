@@ -37,3 +37,5 @@ def test_readiness_endpoint_degraded(monkeypatch):
     body = response.json()
     assert body["status"] == "degraded"
     assert body["services"]["database"] == "down"
+    assert body["diagnostics"]["http_status_policy"]["ready"] == 200
+    assert body["diagnostics"]["http_status_policy"]["degraded"] == 503

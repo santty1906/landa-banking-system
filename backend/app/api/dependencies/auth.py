@@ -5,10 +5,12 @@ from typing import Annotated
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 
+from app.core.config import get_settings
 from app.core.exceptions import AuthenticationError
 from app.infrastructure.security.jwt import TokenType, decode_token
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+settings = get_settings()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.api_v1_prefix}/auth/login")
 
 
 def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> dict[str, str]:

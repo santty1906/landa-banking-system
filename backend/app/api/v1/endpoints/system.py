@@ -37,5 +37,11 @@ def readiness_check() -> dict:
                 "database": "down",
             },
             "message": "Database unavailable. Running in degraded mode.",
+            "diagnostics": {
+                "http_status_policy": {
+                    "ready": status.HTTP_200_OK,
+                    "degraded": status.HTTP_503_SERVICE_UNAVAILABLE,
+                }
+            },
         },
     )

@@ -18,6 +18,7 @@ No business logic is implemented yet.
 - App factory startup wiring with centralized router/handler setup
 - API versioning under `/api/v1`
 - Liveness/readiness health endpoints
+- Readiness policy: `200` when DB is reachable, `503` degraded when DB is unavailable
 - Synchronous SQLAlchemy + PostgreSQL connection foundation
 - Alembic migration configuration and baseline migration scaffold
 - Typed environment settings with `.env` loading

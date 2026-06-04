@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from app.core.exceptions import AppError
+from app.core.exceptions import AppError, ValidationAppError
 from app.main import create_app
 
 
@@ -34,3 +34,19 @@ def test_unexpected_error_response_shape():
     assert response.status_code == 500
     body = response.json()
     assert body["error"]["code"] == "INTERNAL_ERROR"
+
+
+def test_validation_app_error_response_shape():
+    app = create_app()
+
+    @app.get("/raise-validation-app-error")
+    def raise_validation_app_error():
+        raise ValidationAppError("bad payload", details={"field": "email"})
+
+    client = TestClient(app)
+    response = client.get("/raise-validation-app-error")
+
+    assert response.status_code == 400
+    body = response.json()
+    assert body["error"]["code"] == "APP_VALIDATION_ERROR"
+    assert body["error"]["details"]["field"] == "email"
