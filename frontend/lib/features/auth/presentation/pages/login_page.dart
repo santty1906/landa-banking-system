@@ -336,7 +336,7 @@ class _FaceIdSection extends StatelessWidget {
             height: 168,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: BankingThemeTokens.glowBlue.withOpacity(0.7),
+              color: BankingThemeTokens.glowBlue.withValues(alpha: 0.7),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x77CDEFFF),
@@ -623,7 +623,7 @@ class _BatteryBadge extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6, vertical: 2),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withOpacity(0.7), width: 0.8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 0.8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
