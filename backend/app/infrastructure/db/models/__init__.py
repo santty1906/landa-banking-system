@@ -1,6 +1,6 @@
-"""Model registry for Alembic autogeneration.
+"""Model registry for Alembic autogeneration."""
 
-Import concrete model modules here once they exist.
-"""
+from app.infrastructure.db.models.auth_audit_log import AuthAuditLog
+from app.infrastructure.db.models.face_embedding import FaceEmbedding
 
-__all__: list[str] = []
+__all__ = ["AuthAuditLog", "FaceEmbedding"]
