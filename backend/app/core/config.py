@@ -6,7 +6,7 @@ especially for beginner/intermediate contributors.
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -34,6 +34,25 @@ class Settings(BaseSettings):
 
     log_level: str = Field(default="INFO")
     log_format: str = Field(default="text")
+
+    face_recognition_model: str = Field(default="Facenet512")
+    face_recognition_detector_backend: str = Field(default="opencv")
+    face_match_threshold: float = Field(default=0.35)
+    face_image_max_size_bytes: int = Field(default=5_000_000)
+    face_image_min_width: int = Field(default=120)
+    face_image_min_height: int = Field(default=120)
+    face_image_min_brightness: float = Field(default=35.0)
+    face_image_min_laplacian_variance: float = Field(default=80.0)
+    face_embedding_encryption_key: str = Field(default="change_this_face_embedding_key")
+    face_embedding_key_version: str = Field(default="v1")
+
+
+    @model_validator(mode="after")
+    def validate_security_defaults(self) -> "Settings":
+        """Block insecure default embedding key outside local development."""
+        if self.app_env.lower() != "development" and self.face_embedding_encryption_key == "change_this_face_embedding_key":
+            raise ValueError("FACE_EMBEDDING_ENCRYPTION_KEY must be changed outside development")
+        return self
 
     @property
     def sqlalchemy_database_uri(self) -> str:

@@ -11,4 +11,10 @@ def test_null_face_adapter_raises_not_implemented():
     adapter = NullFaceRecognitionAdapter()
 
     with pytest.raises(NotImplementedError, match="not implemented"):
-        adapter.verify_faces("ref.jpg", "candidate.jpg")
+        adapter.validate_image_quality(b"image-bytes")
+
+    with pytest.raises(NotImplementedError, match="not implemented"):
+        adapter.generate_embedding(b"image-bytes")
+
+    with pytest.raises(NotImplementedError, match="not implemented"):
+        adapter.compare_embeddings([0.1], [0.1])

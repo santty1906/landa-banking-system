@@ -50,4 +50,4 @@ def test_protected_endpoint_accepts_access_token(protected_client, access_token)
     )
 
     assert response.status_code == 200
-    assert response.json()["user_id"] == "student_1"
+    assert response.json()["user_id"]

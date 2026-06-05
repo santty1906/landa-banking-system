@@ -1,4 +1,4 @@
-"""JWT helpers with access/refresh token foundations."""
+"""JWT helpers for access/refresh token handling with typed claims."""
 
 from __future__ import annotations
 
@@ -26,6 +26,8 @@ class TokenPayload(BaseModel):
     exp: int
     iat: int
     jti: str
+    sid: str | None = None
+    previous_jti: str | None = None
 
 
 def _create_token(
@@ -85,5 +87,10 @@ def decode_token(token: str) -> TokenPayload:
 
 
 def build_refresh_rotation_claims(previous_jti: str | None = None) -> dict[str, str | None]:
-    """Helper placeholder for future refresh-token rotation implementation."""
+    """Claims that link rotated refresh tokens for replay analysis."""
     return {"previous_jti": previous_jti}
+
+
+def token_expiration_datetime(exp: int) -> datetime:
+    """Convert UNIX expiration timestamps into timezone-aware datetimes."""
+    return datetime.fromtimestamp(exp, tz=UTC)
