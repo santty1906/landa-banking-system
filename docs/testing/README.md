@@ -20,12 +20,11 @@ python -m compileall app
 pytest
 ```
 
-Run integration tests explicitly:
+Run integration tests explicitly (requires a running PostgreSQL instance):
 
-```bash
-cd backend
-pytest -m integration -o addopts=''
-```
+If you're using the repository's Docker Compose DB (`docker compose up -d db`), it exposes Postgres on host port 5433 by default:
+
+    POSTGRES_HOST=localhost POSTGRES_PORT=5433 pytest -m integration -o addopts=''
 
 Run heavy provider tests explicitly:
 
