@@ -1,4 +1,7 @@
+import pytest
 from app.main import create_app
+
+pytestmark = pytest.mark.unit
 
 
 def test_create_app_loads_core_metadata():

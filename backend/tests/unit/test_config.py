@@ -1,4 +1,7 @@
+import pytest
 from app.core.config import Settings, get_settings
+
+pytestmark = pytest.mark.unit
 
 
 def test_settings_build_database_uri(monkeypatch):

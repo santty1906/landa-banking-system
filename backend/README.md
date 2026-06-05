@@ -30,7 +30,7 @@ No business logic is implemented yet.
 ## Local commands
 
 ```bash
-cd /tmp/workspace/santty1906/LandaProject/backend
+cd backend
 pip install -r requirements/dev.txt
 ```
 
@@ -54,4 +54,16 @@ Run migrations:
 alembic upgrade head
 alembic revision --autogenerate -m "describe_change"
 alembic downgrade -1
+```
+
+Run integration suite (PostgreSQL-backed):
+
+```bash
+pytest -m integration -o addopts=''
+```
+
+Run heavy face-provider suite (manual/nightly):
+
+```bash
+RUN_FACE_PROVIDER_TESTS=1 pytest -m face_provider -o addopts=''
 ```

@@ -1,6 +1,9 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+
+pytestmark = pytest.mark.api
 
 
 def test_liveness_endpoint_returns_alive():

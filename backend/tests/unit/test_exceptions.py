@@ -1,7 +1,10 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.core.exceptions import AppError, ValidationAppError
 from app.main import create_app
+
+pytestmark = pytest.mark.unit
 
 
 def test_app_error_response_shape():

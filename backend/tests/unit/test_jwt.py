@@ -1,3 +1,4 @@
+import pytest
 from app.core.config import get_settings
 from app.infrastructure.security.jwt import (
     TokenType,
@@ -6,6 +7,8 @@ from app.infrastructure.security.jwt import (
     create_refresh_token,
     decode_token,
 )
+
+pytestmark = [pytest.mark.unit, pytest.mark.auth, pytest.mark.security]
 
 
 def test_create_and_decode_access_token(monkeypatch):
