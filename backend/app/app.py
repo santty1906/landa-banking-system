@@ -6,14 +6,22 @@ from .config import Config
 from .models import db
 
 
-def create_app(config_class=Config, overrides=None):
+def create_app(config_class=Config, database_uri=None, upload_folder=None):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    if overrides:
-        app.config.update(overrides)
-
     os.makedirs(app.instance_path, exist_ok=True)
+
+    db_uri = database_uri or os.environ.get(
+        "DATABASE_URL", f"sqlite:///{os.path.join(app.instance_path, 'landa.db')}"
+    )
+    up_folder = upload_folder or os.environ.get(
+        "UPLOAD_FOLDER", os.path.join(app.instance_path, "faces")
+    )
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
+    app.config["UPLOAD_FOLDER"] = up_folder
+
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
     db.init_app(app)

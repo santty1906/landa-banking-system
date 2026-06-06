@@ -1,6 +1,3 @@
-import os
-import tempfile
-
 import pytest
 
 from app.app import create_app
@@ -10,15 +7,12 @@ from app.config import Config
 
 class TestConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
-    UPLOAD_FOLDER = tempfile.mkdtemp()
     SECRET_KEY = "test-secret"
-    WTF_CSRF_ENABLED = False
 
 
 @pytest.fixture
 def app():
-    app = create_app(TestConfig)
+    app = create_app(TestConfig, database_uri="sqlite:///:memory:")
     yield app
 
 
