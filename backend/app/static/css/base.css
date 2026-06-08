@@ -464,3 +464,84 @@ body {
         color: #aaa !important;
     }
 }
+
+.face-loading-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 4;
+    text-align: center;
+    pointer-events: none;
+}
+
+.face-loading-spinner .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255,255,255,0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: face-spin 0.8s linear infinite;
+    margin: 0 auto 8px;
+}
+
+@keyframes face-spin {
+    to { transform: rotate(360deg); }
+}
+
+.face-loading-spinner small {
+    display: block;
+    color: rgba(255,255,255,0.8);
+    font-size: 0.75rem;
+}
+
+.face-permission-warning {
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 8px;
+    background: rgba(255,167,38,0.15);
+    border: 1px solid rgba(255,167,38,0.3);
+    font-size: 0.8rem;
+}
+
+.face-permission-warning strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #e65100;
+}
+
+.face-permission-warning small {
+    color: #666;
+}
+
+.face-https-warning {
+    padding: 16px 12px;
+    margin: 8px 0;
+    border-radius: 8px;
+    background: rgba(198,40,40,0.1);
+    border: 1px solid rgba(198,40,40,0.25);
+    text-align: center;
+}
+
+.face-https-warning .bi-shield-exclamation {
+    font-size: 2rem;
+    color: var(--bank-red);
+    display: block;
+    margin-bottom: 8px;
+}
+
+.face-https-warning strong {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--bank-red);
+    margin-bottom: 4px;
+}
+
+.face-https-warning small {
+    color: #888;
+    font-size: 0.75rem;
+}
+
+#faceRetryBtn {
+    min-width: 100px;
+}

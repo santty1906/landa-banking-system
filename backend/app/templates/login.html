@@ -65,11 +65,16 @@
       <div class="modal-body text-center">
         <p class="small text-muted" id="faceInstruction">Look at the camera</p>
         <div class="face-guide-overlay mb-3">
-          <video id="faceVideo" autoplay playsinline class="rounded-3 w-100 bg-dark"></video>
+          <video id="faceVideo" autoplay playsinline muted class="rounded-3 w-100 bg-dark"></video>
           <canvas id="faceCanvas" class="d-none"></canvas>
           <div id="faceGuideRing" class="face-guide-ring"></div>
           <div id="faceCountdown" class="face-countdown"></div>
           <div id="faceStatusBadge" class="face-status-badge" style="display:none;"></div>
+        </div>
+        <div class="d-flex justify-content-center gap-2 mt-2">
+          <button class="btn btn-outline-secondary rounded-3 d-none" id="faceRetryBtn">
+            <i class="bi bi-arrow-clockwise me-1"></i>Retry
+          </button>
         </div>
         <div id="faceStatus" class="mt-2 small"></div>
       </div>

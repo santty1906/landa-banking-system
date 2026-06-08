@@ -13,6 +13,9 @@
     var isCapturing = false;
     var lastCaptureTime = 0;
     var loginUsername = "";
+    var enrolling = false;
+    var enrollmentComplete = false;
+    var cameraLoading = false;
 
     var STEPS = ["frontal", "left", "right"];
     var REQUIRED_FRAMES = 10;
@@ -55,24 +58,54 @@
             startEnrollment();
         });
 
+    var retryBtn = document.getElementById("faceRetryBtn");
+    if (retryBtn) {
+        retryBtn.addEventListener("click", function () {
+            console.log("[Face] Retry button clicked, re-attempting camera");
+            hideRetryButton();
+            hidePermissionWarning();
+            hideHttpsWarning();
+            setStatus("Requesting camera...", "info");
+            startCamera();
+        });
+    }
+
     if (faceModal) {
         var bsModal = new bootstrap.Modal(faceModal);
-        faceModal.addEventListener("hidden.bs.modal", stopCamera);
+        faceModal.addEventListener("hidden.bs.modal", function () {
+            console.log("[Face] Modal hidden");
+            stopCamera();
+        });
         faceModal.addEventListener("shown.bs.modal", function () {
-            if (mode === "enroll" || mode === "verify") {
+            console.log("[Face] Modal shown, mode:", mode, "enrollmentComplete:", enrollmentComplete);
+            if ((mode === "enroll" || mode === "verify") && !enrollmentComplete) {
                 startAnalysis();
             }
         });
     }
 
     function startEnrollment() {
+        if (enrolling) {
+            console.log("[Face] Enrollment already in progress, ignoring duplicate call");
+            return;
+        }
+        if (enrollmentComplete) {
+            console.log("[Face] Enrollment already completed, resetting state");
+            enrollmentComplete = false;
+        }
+        console.log("[Face] Starting enrollment");
         mode = "enroll";
         capturedImages = {};
         captureStep = "frontal";
         validFrameCount = 0;
         isCapturing = false;
+        enrolling = false;
         if (preview) preview.innerHTML = "";
-        if (saveBtn) saveBtn.classList.add("d-none");
+        if (saveBtn) {
+            saveBtn.classList.add("d-none");
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="bi bi-check2 me-1"></i>Save';
+        }
         setInstruction("Look straight ahead");
         setStatus("Position your face in the circle", "info");
         updateAngleDots();
@@ -93,6 +126,23 @@
     }
 
     async function startCamera() {
+        if (cameraLoading) return;
+        if (!window.isSecureContext && location.protocol !== "https:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+            console.warn("[Face] Insecure context - camera requires HTTPS");
+            setStatus("Camera requires HTTPS. Please use https:// or localhost.", "error");
+            setInstruction("Secure connection needed");
+            showHttpsWarning();
+            return;
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.warn("[Face] getUserMedia not supported");
+            setStatus("Camera not supported on this browser.", "error");
+            setInstruction("Unsupported browser");
+            return;
+        }
+        cameraLoading = true;
+        showCameraLoading();
+        console.log("[Face] Requesting camera access");
         try {
             var constraints = {
                 video: {
@@ -100,21 +150,73 @@
                     width: { ideal: 320 },
                     height: { ideal: 240 },
                 },
+                audio: false,
             };
+            if (navigator.permissions && navigator.permissions.query) {
+                try {
+                    var permStatus = await navigator.permissions.query({ name: "camera" });
+                    if (permStatus.state === "denied") {
+                        console.warn("[Face] Camera permission permanently denied");
+                        setStatus("Camera permission denied. Please enable it in browser settings.", "error");
+                        setInstruction("Permission blocked");
+                        cameraLoading = false;
+                        hideCameraLoading();
+                        showPermissionWarning();
+                        return;
+                    }
+                    if (permStatus.state === "prompt") {
+                        console.log("[Face] Camera permission state: prompt (will request)");
+                    }
+                    if (permStatus.state === "granted") {
+                        console.log("[Face] Camera permission already granted");
+                    }
+                } catch (permErr) {
+                    console.log("[Face] Permissions API not supported for camera");
+                }
+            }
             stream = await navigator.mediaDevices.getUserMedia(constraints);
+            console.log("[Face] Camera stream obtained");
             video.srcObject = stream;
+            video.setAttribute("playsinline", "true");
+            video.setAttribute("autoplay", "true");
+            video.setAttribute("muted", "true");
             await video.play();
+            console.log("[Face] Video playback started");
+            cameraLoading = false;
+            hideCameraLoading();
+            if (mode === "enroll" || mode === "verify") {
+                startAnalysis();
+            }
         } catch (err) {
-            setStatus(
-                "Camera access denied. Please allow camera permissions.",
-                "error"
-            );
-            setInstruction("Permission required");
+            cameraLoading = false;
+            hideCameraLoading();
+            console.error("[Face] Camera error:", err.name, err.message);
+            if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+                setStatus("Camera permission denied. Tap allow when prompted, then retry.", "error");
+                setInstruction("Permission required");
+                showPermissionWarning();
+            } else if (err.name === "NotFoundError") {
+                setStatus("No camera found on this device.", "error");
+                setInstruction("Camera unavailable");
+            } else if (err.name === "NotReadableError") {
+                setStatus("Camera is busy. Close other apps using the camera.", "error");
+                setInstruction("Camera busy");
+            } else if (err.name === "OverconstrainedError") {
+                setStatus("Camera does not meet requirements. Try a different device.", "error");
+                setInstruction("Camera incompatible");
+            } else {
+                setStatus("Camera access failed: " + (err.message || "unknown error"), "error");
+                setInstruction("Camera unavailable");
+            }
+            showRetryButton();
         }
     }
 
     function stopCamera() {
+        console.log("[Face] Stopping camera");
         isCapturing = false;
+        enrolling = false;
+        cameraLoading = false;
         if (analysisTimer) {
             clearInterval(analysisTimer);
             analysisTimer = null;
@@ -140,6 +242,10 @@
             guideRing.className = "face-guide-ring";
         }
         if (countdownEl) countdownEl.style.display = "none";
+        hideCameraLoading();
+        hideRetryButton();
+        hidePermissionWarning();
+        hideHttpsWarning();
     }
 
     function startAnalysis() {
@@ -150,6 +256,8 @@
     async function analyzeFrame() {
         if (
             isCapturing ||
+            enrolling ||
+            enrollmentComplete ||
             !video ||
             !video.videoWidth ||
             !video.videoHeight
@@ -383,6 +491,10 @@
     }
 
     function startCountdown() {
+        if (enrolling || enrollmentComplete) {
+            console.log("[Face] Countdown blocked - enrollment already complete or in progress");
+            return;
+        }
         isCapturing = true;
         countdownValue = 3;
         if (countdownEl) {
@@ -391,6 +503,7 @@
         }
         setGuideState("countdown");
         setStatus("Capturing in " + countdownValue + "...", "info");
+        console.log("[Face] Starting countdown, step:", captureStep);
 
         countdownTimer = setInterval(function () {
             countdownValue--;
@@ -404,6 +517,10 @@
     }
 
     function doCapture() {
+        if (enrolling || enrollmentComplete) {
+            console.log("[Face] Capture blocked - enrollment already done");
+            return;
+        }
         if (countdownEl) countdownEl.style.display = "none";
         setGuideState("capturing");
         setStatus("Captured!", "success");
@@ -420,6 +537,7 @@
             var currentIdx = STEPS.indexOf(captureStep);
             if (currentIdx < STEPS.length - 1) {
                 captureStep = STEPS[currentIdx + 1];
+                console.log("[Face] Captured", captureStep, "- advancing to", STEPS[currentIdx + 1]);
                 var labels = {
                     frontal: "Look straight ahead",
                     left: "Turn slightly left",
@@ -439,6 +557,8 @@
                     isCapturing = false;
                 }, 500);
             } else {
+                enrolling = true;
+                console.log("[Face] All 3 angles captured, enrolling...");
                 setInstruction("All angles captured!");
                 setStatus("3/3 captured. Saving...", "success");
                 updateAngleDots();
@@ -477,6 +597,11 @@
     }
 
     function saveEnrollment() {
+        if (enrollmentComplete) {
+            console.log("[Face] Enrollment already completed, skipping save");
+            return;
+        }
+        console.log("[Face] Sending enrollment to server");
         if (saveBtn) {
             saveBtn.disabled = true;
             saveBtn.innerHTML =
@@ -489,8 +614,17 @@
         })
             .then(function (resp) {
                 if (resp.ok) {
+                    console.log("[Face] Enrollment API success, response OK");
+                    enrollmentComplete = true;
+                    enrolling = false;
                     setStatus("Face enrolled successfully!", "success");
                     setInstruction("Enrollment complete");
+                    stopCamera();
+                    if (saveBtn) {
+                        saveBtn.disabled = true;
+                        saveBtn.innerHTML =
+                            '<i class="bi bi-check2 me-1"></i>Enrolled';
+                    }
                     setTimeout(function () {
                         if (bsModal) bsModal.hide();
                         location.reload();
@@ -504,14 +638,24 @@
                 }
             })
             .catch(function (err) {
+                console.error("[Face] Enrollment error:", err.message);
                 setStatus(err.message || "Enrollment failed", "error");
                 if (saveBtn) {
                     saveBtn.disabled = false;
                     saveBtn.innerHTML =
-                        '<i class="bi bi-check2 me-1"></i>Save';
+                        '<i class="bi bi-arrow-clockwise me-1"></i>Retry';
                 }
+                enrolling = false;
                 isCapturing = false;
                 validFrameCount = 0;
+                if (analysisTimer) {
+                    clearInterval(analysisTimer);
+                    analysisTimer = null;
+                }
+                if (countdownTimer) {
+                    clearInterval(countdownTimer);
+                    countdownTimer = null;
+                }
             });
     }
 
@@ -579,6 +723,75 @@
         if (!guideRing) return;
         guideRing.className = "face-guide-ring";
         if (state) guideRing.classList.add(state);
+    }
+
+    function showCameraLoading() {
+        if (!guideRing) return;
+        var existing = document.getElementById("faceLoadingSpinner");
+        if (existing) return;
+        var el = document.createElement("div");
+        el.id = "faceLoadingSpinner";
+        el.className = "face-loading-spinner";
+        el.innerHTML =
+            '<div class="spinner"></div><small>Starting camera...</small>';
+        guideRing.parentElement.appendChild(el);
+    }
+
+    function hideCameraLoading() {
+        var el = document.getElementById("faceLoadingSpinner");
+        if (el) el.remove();
+    }
+
+    function showPermissionWarning() {
+        hideCameraLoading();
+        var existing = document.getElementById("facePermissionWarning");
+        if (existing) return;
+        if (!status) return;
+        var el = document.createElement("div");
+        el.id = "facePermissionWarning";
+        el.className = "face-permission-warning";
+        el.innerHTML =
+            '<strong><i class="bi bi-camera-video-off me-1"></i>Camera permission needed</strong>' +
+            "<small>Please allow camera access in your browser settings, then tap Retry below.</small>";
+        if (status.parentElement) status.parentElement.insertBefore(el, status);
+    }
+
+    function hidePermissionWarning() {
+        var el = document.getElementById("facePermissionWarning");
+        if (el) el.remove();
+    }
+
+    function showHttpsWarning() {
+        hideCameraLoading();
+        var existing = document.getElementById("faceHttpsWarning");
+        if (existing) return;
+        if (!guideRing) return;
+        var el = document.createElement("div");
+        el.id = "faceHttpsWarning";
+        el.className = "face-https-warning";
+        el.innerHTML =
+            '<i class="bi bi-shield-exclamation"></i>' +
+            "<strong>HTTPS Required</strong>" +
+            "<small>Camera access requires a secure connection (HTTPS) or localhost. " +
+            "Please access this site via https:// or use localhost during development.</small>";
+        guideRing.parentElement.appendChild(el);
+    }
+
+    function hideHttpsWarning() {
+        var el = document.getElementById("faceHttpsWarning");
+        if (el) el.remove();
+    }
+
+    function showRetryButton() {
+        if (retryBtn) {
+            retryBtn.classList.remove("d-none");
+        }
+    }
+
+    function hideRetryButton() {
+        if (retryBtn) {
+            retryBtn.classList.add("d-none");
+        }
     }
 
     window.LandaFace = {
