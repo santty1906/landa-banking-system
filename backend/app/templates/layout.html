@@ -2,16 +2,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#c62828">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LANDA">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="LANDA Bank">
+    <meta name="format-detection" content="telephone=no">
     <link rel="manifest" href="{{ url_for('routes.manifest') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{ url_for('static', filename='icons/icon-152x152.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/icon-180x180.png') }}">
+    <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <link rel="apple-touch-startup-image" href="{{ url_for('static', filename='icons/icon-512x512.png') }}" media="(device-width: 375px)">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='icons/icon-512x512.png') }}">
     <title>LANDA Bank - {% block title %}Home{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
 </head>
 <body>
+    <div id="pwaInstallBanner" class="pwa-install-banner">
+        <i class="bi bi-download me-2"></i>
+        Install LANDA Bank for the best experience
+        <small class="d-block mt-1">Add to home screen for quick access</small>
+    </div>
+
     {% if session.user_id %}
     <header class="bank-header">
         <div class="container">
@@ -61,7 +78,108 @@
     </nav>
     {% endif %}
 
+    <div id="toastContainer" class="toast-container"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+    (function() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js').then(function(reg) {
+                reg.addEventListener('updatefound', function() {
+                    var newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', function() {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            showUpdateToast();
+                        }
+                    });
+                });
+            }).catch(function() {});
+
+            navigator.serviceWorker.addEventListener('controllerchange', function() {
+                window.location.reload();
+            });
+        }
+
+        var deferredPrompt = null;
+        var installBanner = document.getElementById('pwaInstallBanner');
+
+        window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (installBanner) {
+                installBanner.classList.add('show');
+                installBanner.addEventListener('click', function onClick() {
+                    installBanner.classList.remove('show');
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then(function() {
+                        deferredPrompt = null;
+                    });
+                    installBanner.removeEventListener('click', onClick);
+                });
+            }
+        });
+
+        window.addEventListener('appinstalled', function() {
+            if (installBanner) installBanner.classList.remove('show');
+            deferredPrompt = null;
+        });
+
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            if (installBanner) installBanner.style.display = 'none';
+        }
+
+        function showUpdateToast() {
+            var container = document.getElementById('toastContainer');
+            if (!container) return;
+            var toast = document.createElement('div');
+            toast.className = 'app-toast';
+            toast.innerHTML =
+                '<i class="bi bi-arrow-clockwise"></i>' +
+                '<span>App updated. <a href="#" style="color:#ffa726;font-weight:600;" onclick="location.reload()">Reload</a></span>' +
+                '<button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>';
+            container.appendChild(toast);
+            setTimeout(function() { if (toast.parentElement) toast.remove(); }, 10000);
+        }
+
+        window.addEventListener('offline', function() {
+            var container = document.getElementById('toastContainer');
+            if (!container) return;
+            var toast = document.createElement('div');
+            toast.className = 'app-toast';
+            toast.innerHTML =
+                '<i class="bi bi-wifi-off"></i>' +
+                '<span>You are offline. Some features may be unavailable.</span>' +
+                '<button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>';
+            container.appendChild(toast);
+        });
+
+        window.addEventListener('online', function() {
+            var container = document.getElementById('toastContainer');
+            if (!container) return;
+            var toast = document.createElement('div');
+            toast.className = 'app-toast';
+            toast.innerHTML =
+                '<i class="bi bi-wifi"></i>' +
+                '<span>Back online!</span>';
+            container.appendChild(toast);
+            setTimeout(function() { if (toast.parentElement) toast.remove(); }, 4000);
+        });
+
+        if (!navigator.onLine) {
+            var container = document.getElementById('toastContainer');
+            if (container) {
+                var toast = document.createElement('div');
+                toast.className = 'app-toast';
+                toast.innerHTML =
+                    '<i class="bi bi-wifi-off"></i>' +
+                    '<span>You are offline. Some features may be unavailable.</span>';
+                container.appendChild(toast);
+            }
+        }
+    })();
+    </script>
+
     {% block scripts %}{% endblock %}
 </body>
 </html>

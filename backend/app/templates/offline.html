@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block title %}Offline{% endblock %}
+{% block content %}
+<div class="offline-page">
+    <div class="offline-icon">
+        <i class="bi bi-wifi-off"></i>
+    </div>
+    <h4>You're Offline</h4>
+    <p>LANDA Bank needs an internet connection to process your requests. Please check your connection and try again.</p>
+    <button class="btn btn-danger rounded-3 px-4 mt-3" onclick="location.reload()">
+        <i class="bi bi-arrow-clockwise me-2"></i>Retry
+    </button>
+</div>
+{% endblock %}

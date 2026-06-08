@@ -75,3 +75,55 @@ def test_protected_apis_require_login(client):
     for path in ["/api/face/status", "/api/face/enroll", "/api/face/verify"]:
         resp = client.post(path) if path != "/api/face/status" else client.get(path)
         assert resp.status_code == 302 or resp.status_code == 401
+
+
+def test_face_check_user_not_found(client, app):
+    with app.app_context():
+        resp = client.get("/api/face/check-user?username=nonexistent")
+        assert resp.json["enrolled"] is False
+
+
+def test_face_check_user_empty(client):
+    resp = client.get("/api/face/check-user?username=")
+    assert resp.json["enrolled"] is False
+
+
+def test_face_check_user_found_not_enrolled(client, registered_user):
+    resp = client.get("/api/face/check-user?username=testuser")
+    assert resp.json["enrolled"] is False
+
+
+def test_face_login_verify_missing_data(client):
+    resp = client.post("/api/face/login-verify", json={})
+    assert resp.status_code == 400
+
+
+def test_face_login_verify_no_username(client):
+    resp = client.post("/api/face/login-verify", json={
+        "image": "data:image/jpeg;base64,test",
+        "username": "",
+    })
+    assert resp.status_code == 400
+
+
+def test_face_login_verify_user_not_found(client):
+    resp = client.post("/api/face/login-verify", json={
+        "image": "data:image/jpeg;base64,test",
+        "username": "nobody",
+    })
+    assert resp.status_code == 404
+
+
+def test_face_login_verify_not_enrolled(client, registered_user):
+    resp = client.post("/api/face/login-verify", json={
+        "image": "data:image/jpeg;base64,test",
+        "username": "testuser",
+    })
+    assert resp.status_code == 400
+    assert "not enrolled" in resp.json["error"]
+
+
+def test_offline_page(client):
+    resp = client.get("/offline")
+    assert resp.status_code == 200
+    assert b"Offline" in resp.data or b"offline" in resp.data

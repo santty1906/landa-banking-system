@@ -69,20 +69,25 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4">
       <div class="modal-header border-0">
-        <h6 class="modal-title fw-bold" id="faceModalLabel">Enroll Face</h6>
+        <h6 class="modal-title fw-bold" id="faceModalLabel">Face Enrollment</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body text-center">
-        <p class="small text-muted" id="faceInstruction">Position your face in the center</p>
-        <div class="camera-container mb-3">
+        <p class="small text-muted" id="faceInstruction">Look straight ahead</p>
+        <div class="face-guide-overlay mb-3">
           <video id="faceVideo" autoplay playsinline class="rounded-3 w-100 bg-dark"></video>
           <canvas id="faceCanvas" class="d-none"></canvas>
+          <div id="faceGuideRing" class="face-guide-ring"></div>
+          <div id="faceCountdown" class="face-countdown"></div>
+          <div id="faceStatusBadge" class="face-status-badge" style="display:none;"></div>
+        </div>
+        <div class="angle-indicator mb-2">
+          <span class="angle-dot" title="Frontal"></span>
+          <span class="angle-dot" title="Left"></span>
+          <span class="angle-dot" title="Right"></span>
         </div>
         <div id="facePreview" class="d-flex justify-content-center gap-2 mb-3"></div>
         <div class="d-flex justify-content-center gap-2">
-          <button class="btn btn-danger rounded-3" id="captureFaceBtn">
-            <i class="bi bi-camera me-1"></i>Capture
-          </button>
           <button class="btn btn-success rounded-3 d-none" id="saveFaceBtn">
             <i class="bi bi-check2 me-1"></i>Save
           </button>

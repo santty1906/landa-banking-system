@@ -18,7 +18,7 @@
                         <label class="form-label small fw-medium">Username</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-person"></i></span>
-                            <input type="text" name="username" class="form-control" placeholder="Enter username" required autofocus>
+                            <input type="text" name="username" id="loginUsername" class="form-control" placeholder="Enter username" required autofocus>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -33,7 +33,17 @@
                     </button>
                 </form>
 
-                <div class="text-center">
+                <div class="login-divider">or</div>
+
+                <div id="faceLoginSection" style="display:none;">
+                    <div class="face-login-option" id="loginFaceBtn">
+                        <i class="bi bi-shield-lock"></i>
+                        <h6 class="fw-bold mt-2 mb-1">Sign in with Face ID</h6>
+                        <small class="text-muted">Use your camera for fast access</small>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
                     <small class="text-muted">
                         Don't have an account?
                         <a href="{{ url_for('auth.register') }}" class="text-danger fw-medium">Register</a>
@@ -43,4 +53,31 @@
         </div>
     </div>
 </div>
+
+<!-- Face Verification Modal -->
+<div class="modal fade" id="faceModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4">
+      <div class="modal-header border-0">
+        <h6 class="modal-title fw-bold">Face ID Verification</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <p class="small text-muted" id="faceInstruction">Look at the camera</p>
+        <div class="face-guide-overlay mb-3">
+          <video id="faceVideo" autoplay playsinline class="rounded-3 w-100 bg-dark"></video>
+          <canvas id="faceCanvas" class="d-none"></canvas>
+          <div id="faceGuideRing" class="face-guide-ring"></div>
+          <div id="faceCountdown" class="face-countdown"></div>
+          <div id="faceStatusBadge" class="face-status-badge" style="display:none;"></div>
+        </div>
+        <div id="faceStatus" class="mt-2 small"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
 {% endblock %}

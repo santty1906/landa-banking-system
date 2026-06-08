@@ -22,14 +22,23 @@ def login():
             session["user_id"] = user.id
             session["username"] = user.username
             db.session.add(
-                AuditLog(user_id=user.id, action="login", ip_address=request.remote_addr, success=True)
+                AuditLog(
+                    user_id=user.id,
+                    action="login",
+                    ip_address=request.remote_addr,
+                    success=True,
+                )
             )
             db.session.commit()
             flash(f"Welcome back, {user.username}!", "success")
             return redirect(url_for("routes.dashboard"))
 
         db.session.add(
-            AuditLog(action=f"failed login for {username}", ip_address=request.remote_addr, success=False)
+            AuditLog(
+                action=f"failed login for {username}",
+                ip_address=request.remote_addr,
+                success=False,
+            )
         )
         db.session.commit()
         flash("Invalid username or password.", "danger")
@@ -65,7 +74,11 @@ def register():
             flash("Password must be at least 6 characters.", "danger")
             return render_template("register.html")
 
-        user = User(username=username, email=email, password_hash=hash_password(password))
+        user = User(
+            username=username,
+            email=email,
+            password_hash=hash_password(password),
+        )
         db.session.add(user)
         db.session.commit()
         flash("Registration successful! Please log in.", "success")
@@ -78,7 +91,12 @@ def register():
 def logout():
     if "user_id" in session:
         db.session.add(
-            AuditLog(user_id=session["user_id"], action="logout", ip_address=request.remote_addr, success=True)
+            AuditLog(
+                user_id=session["user_id"],
+                action="logout",
+                ip_address=request.remote_addr,
+                success=True,
+            )
         )
         db.session.commit()
     session.clear()
