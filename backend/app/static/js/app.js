@@ -178,6 +178,7 @@
             console.log("[Face] Camera stream obtained");
             video.srcObject = stream;
             video.setAttribute("playsinline", "true");
+            video.setAttribute("webkit-playsinline", "true");
             video.setAttribute("autoplay", "true");
             video.setAttribute("muted", "true");
             await video.play();
