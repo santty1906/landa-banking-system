@@ -14,6 +14,7 @@
                 </div>
 
                 <form method="POST" action="{{ url_for('auth.register') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label class="form-label small fw-medium">Username</label>
                         <div class="input-group">
@@ -32,14 +33,14 @@
                         <label class="form-label small fw-medium">Password</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                            <input type="password" name="password" class="form-control" placeholder="At least 6 characters" required minlength="6">
+                            <input type="password" name="password" class="form-control" placeholder="At least 8 characters" required minlength="8">
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-medium">Confirm Password</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
-                            <input type="password" name="confirm_password" class="form-control" placeholder="Repeat password" required minlength="6">
+                            <input type="password" name="confirm_password" class="form-control" placeholder="Repeat password" required minlength="8">
                         </div>
                     </div>
                     <button type="submit" class="btn btn-danger w-100 py-2 fw-bold mb-3 rounded-3">
