@@ -8,6 +8,7 @@ from .security import (
     PASSWORD_MIN_LENGTH,
     hash_password,
     is_strong_password,
+    issue_trusted_device,
     verify_password,
 )
 
@@ -68,7 +69,9 @@ def login():
             db.session.commit()
 
             flash(f"Welcome back, {user.username}!", "success")
-            return redirect(url_for("routes.dashboard"))
+            response = redirect(url_for("routes.dashboard"))
+            issue_trusted_device(response, user.id)
+            return response
 
         db.session.add(AuditLog(
             action=f"failed login for {username}",

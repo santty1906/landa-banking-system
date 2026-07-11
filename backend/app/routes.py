@@ -16,7 +16,7 @@ from flask import (
 from .app import csrf
 from .extensions import limiter
 from .models import AuditLog, User, db
-from .security import login_required
+from .security import is_trusted_device, login_required
 
 routes_bp = Blueprint("routes", __name__, template_folder="templates")
 
@@ -102,8 +102,6 @@ def face_status():
 @routes_bp.route("/api/face/check-user")
 @limiter.limit("20 per minute")
 def face_check_user():
-    # No revela si el usuario existe o no (mismo shape de respuesta en ambos
-    # casos) para evitar enumeración de cuentas (ISO 27001 A.8.5).
     username = request.args.get("username", "").strip()
 
     if not username:
@@ -111,10 +109,15 @@ def face_check_user():
 
     user = User.query.filter_by(username=username).first()
 
-    if not user:
+    if not user or not user.face_enrolled:
         return jsonify({"enrolled": False})
 
-    return jsonify({"enrolled": bool(user.face_enrolled)})
+    # Segundo factor: Face ID solo se ofrece en un dispositivo que ya haya
+    # iniciado sesión con contraseña antes en este mismo navegador.
+    if not is_trusted_device(user.id):
+        return jsonify({"enrolled": False})
+
+    return jsonify({"enrolled": True})
 
 
 @routes_bp.route("/api/face/enroll", methods=["POST"])
@@ -180,6 +183,7 @@ def face_verify():
         return jsonify(result), 401
 
     except Exception:
+        current_app.logger.exception("Fallo en el endpoint de Face ID")
         return jsonify({"error": "Internal error"}), 500
 
 
@@ -206,6 +210,11 @@ def face_login_verify():
     if not user.face_enrolled:
         return jsonify({"error": "Face login not enrolled"}), 400
 
+    if not is_trusted_device(user.id):
+        return jsonify({
+            "error": "This device is not recognized. Please sign in with your password first."
+        }), 403
+
     try:
         result = verify_face_detailed(username, data["image"])
 
@@ -230,6 +239,7 @@ def face_login_verify():
         return jsonify(result), 401
 
     except Exception:
+        current_app.logger.exception("Fallo en el endpoint de Face ID")
         return jsonify({"error": "Internal error"}), 500
 
 

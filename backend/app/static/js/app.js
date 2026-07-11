@@ -526,9 +526,20 @@
         setGuideState("capturing");
         setStatus("Captured!", "success");
         var ctx = canvas.getContext("2d");
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
+
+        // Redimensionar a un máximo de 640px en el lado más largo: el
+        // reconocimiento facial no necesita más resolución que esa, y
+        // enviar la foto completa de la cámara de un celular (a veces
+        // 3000px+ de ancho) ralentiza tanto la subida como el análisis
+        // en el servidor (RetinaFace + Facenet512 + anti-spoofing).
+        var MAX_DIM = 640;
+        var scale = Math.min(1, MAX_DIM / Math.max(video.videoWidth, video.videoHeight));
+        var outW = Math.round(video.videoWidth * scale);
+        var outH = Math.round(video.videoHeight * scale);
+
+        canvas.width = outW;
+        canvas.height = outH;
+        ctx.drawImage(video, 0, 0, outW, outH);
         var dataUrl = canvas.toDataURL("image/jpeg", 0.85);
 
         if (mode === "enroll") {
@@ -690,7 +701,7 @@
                         setTimeout(function () {
                             isCapturing = false;
                             validFrameCount = 0;
-                        }, 1000);
+                        }, 5000);
                     });
                 }
             })
@@ -699,7 +710,7 @@
                 setTimeout(function () {
                     isCapturing = false;
                     validFrameCount = 0;
-                }, 1000);
+                }, 5000);
             });
     }
 

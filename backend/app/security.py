@@ -1,11 +1,18 @@
+import hashlib
 import re
+import secrets
+from datetime import datetime, timezone
 from functools import wraps
-from flask import flash, redirect, session, url_for
+
+from flask import current_app, flash, redirect, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from .models import User, db
+from .models import TrustedDevice, User, db
 
 PASSWORD_MIN_LENGTH = 8
+
+TRUSTED_DEVICE_COOKIE = "landa_trusted_device"
+TRUSTED_DEVICE_DAYS = 90
 
 
 def hash_password(password: str) -> str:
@@ -23,6 +30,51 @@ def is_strong_password(password: str) -> bool:
     has_letter = re.search(r"[A-Za-z]", password) is not None
     has_digit = re.search(r"\d", password) is not None
     return has_letter and has_digit
+
+
+def _hash_device_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def issue_trusted_device(response, user_id):
+    """
+    Marca el dispositivo actual como confiable para este usuario, después de
+    un login exitoso con contraseña. Face ID solo funcionará después en
+    dispositivos que hayan pasado por aquí (segundo factor: "algo que tienes").
+    """
+    token = secrets.token_urlsafe(32)
+    token_hash = _hash_device_token(token)
+
+    db.session.add(TrustedDevice(user_id=user_id, token_hash=token_hash))
+    db.session.commit()
+
+    response.set_cookie(
+        TRUSTED_DEVICE_COOKIE,
+        token,
+        max_age=60 * 60 * 24 * TRUSTED_DEVICE_DAYS,
+        httponly=True,
+        secure=current_app.config.get("SESSION_COOKIE_SECURE", True),
+        samesite="Lax",
+    )
+    return response
+
+
+def is_trusted_device(user_id) -> bool:
+    """Verifica si el navegador actual ya inició sesión con contraseña antes."""
+    token = request.cookies.get(TRUSTED_DEVICE_COOKIE)
+
+    if not token:
+        return False
+
+    token_hash = _hash_device_token(token)
+    device = TrustedDevice.query.filter_by(user_id=user_id, token_hash=token_hash).first()
+
+    if not device:
+        return False
+
+    device.last_used_at = datetime.now(timezone.utc)
+    db.session.commit()
+    return True
 
 
 def login_required(f):

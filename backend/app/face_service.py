@@ -3,6 +3,7 @@ import hashlib
 import os
 import pickle
 import tempfile
+import time
 
 import cv2
 import numpy as np
@@ -10,7 +11,48 @@ import numpy as np
 from flask import current_app
 from cryptography.fernet import Fernet
 
-def _get_cipher():
+def _derive_user_key(master_key: bytes, salt: bytes) -> bytes:
+    """
+    Deriva una clave Fernet específica de un usuario a partir de la clave
+    maestra y un salt propio de esa persona, usando HKDF (RFC 5869).
+
+    Si la clave maestra se filtra junto con el salt de un usuario puntual,
+    solo la plantilla biométrica de esa persona queda expuesta; el resto de
+    usuarios no se ven afectados, y basta con regenerar su salt para
+    invalidar ("revocar") su plantilla vieja sin tocar a nadie más.
+
+    Nota: esto no protege contra una filtración completa de la base de datos
+    junto con la clave maestra (en ese caso un atacante también tendría los
+    salts) — mitiga el caso de una filtración aislada, no todos los escenarios.
+    """
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+    from cryptography.hazmat.primitives import hashes
+
+    hkdf = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        info=b"landa-face-embeddings",
+    )
+    derived = hkdf.derive(master_key)
+    return base64.urlsafe_b64encode(derived)
+
+
+def _get_or_create_bio_salt(username: str) -> bytes:
+    from .models import User, db
+
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        raise ValueError("User not found")
+
+    if not user.bio_salt:
+        user.bio_salt = base64.urlsafe_b64encode(os.urandom(32)).decode("utf-8")
+        db.session.commit()
+
+    return base64.urlsafe_b64decode(user.bio_salt.encode("utf-8"))
+
+
+def _get_cipher(user_salt: bytes):
     key = current_app.config.get("ENCRYPTION_KEY")
 
     if not key:
@@ -19,7 +61,11 @@ def _get_cipher():
     if isinstance(key, str):
         key = key.encode()
 
-    return Fernet(key)
+    # ENCRYPTION_KEY ya es una clave Fernet (base64 de 32 bytes); se decodifica
+    # para usar esos bytes como material de entrada de la derivación HKDF.
+    master_key_raw = base64.urlsafe_b64decode(key)
+    derived = _derive_user_key(master_key_raw, user_salt)
+    return Fernet(derived)
 
 def _get_user_dir(username: str) -> str:
     base = current_app.config["UPLOAD_FOLDER"]
@@ -115,21 +161,78 @@ def _compute_average_embedding(embeddings):
     return _normalize_embedding(avg)
 
 
+def _check_face_framing(image_path, facial_area, face_confidence, edge_margin=0.02):
+    """
+    Rechaza capturas donde el rostro detectado está recortado por el borde
+    de la imagen (rostro parcial) o la confianza de detección es muy baja.
+    """
+    min_confidence = current_app.config.get("FACE_MIN_CONFIDENCE", 0.80)
+
+    if face_confidence is not None and face_confidence < min_confidence:
+        raise ValueError(
+            "No se detectó el rostro con suficiente claridad; acércate "
+            "más a la cámara y evita sombras fuertes o contraluz."
+        )
+
+    if not facial_area:
+        return
+
+    img = cv2.imread(image_path)
+    if img is None:
+        return
+
+    img_h, img_w = img.shape[:2]
+    x, y = facial_area.get("x", 0), facial_area.get("y", 0)
+    w, h = facial_area.get("w", 0), facial_area.get("h", 0)
+
+    margin_x = img_w * edge_margin
+    margin_y = img_h * edge_margin
+
+    touches_edge = (
+        x <= margin_x
+        or y <= margin_y
+        or (x + w) >= (img_w - margin_x)
+        or (y + h) >= (img_h - margin_y)
+    )
+
+    if touches_edge:
+        raise ValueError(
+            "El rostro aparece recortado por el borde de la imagen; "
+            "centra tu cara completa dentro del círculo guía e inténtalo de nuevo."
+        )
+
+
 def _get_embedding(image_path: str):
     DeepFace = _get_deepface()
 
-    result = DeepFace.represent(
-        img_path=image_path,
-        model_name=current_app.config["FACE_MODEL_NAME"],
-        enforce_detection=current_app.config["FACE_ENFORCE_DETECTION"]
-    )
+    t0 = time.time()
 
-    embedding = result[0]["embedding"]
+    try:
+        result = DeepFace.represent(
+            img_path=image_path,
+            model_name=current_app.config["FACE_MODEL_NAME"],
+            detector_backend=current_app.config["FACE_DETECTOR_BACKEND"],
+            enforce_detection=current_app.config["FACE_ENFORCE_DETECTION"],
+            anti_spoofing=current_app.config.get("FACE_ANTI_SPOOFING", True),
+        )
+    except ValueError as e:
+        if "spoof" in str(e).lower():
+            raise ValueError(
+                "No se pudo confirmar que hay una persona real frente a la "
+                "cámara. Evita usar fotos, pantallas o videos; intenta de "
+                "nuevo con la cámara en vivo."
+            ) from e
+        raise
+    current_app.logger.info("DeepFace.represent tardó %.2f s", time.time() - t0)
 
-    return _normalize_embedding(embedding)
+    face = result[0]
+    _check_face_framing(image_path, face.get("facial_area"), face.get("face_confidence"))
+
+    return _normalize_embedding(face["embedding"])
 
 def _save_embeddings(username: str, embeddings: dict):
-    cipher = _get_cipher()
+    salt = _get_or_create_bio_salt(username)
+    cipher = _get_cipher(salt)
     path = _get_embeddings_path(username)
 
     data = pickle.dumps(embeddings)
@@ -145,7 +248,8 @@ def _load_embeddings(username: str):
     if not os.path.exists(path):
         raise ValueError("User not enrolled")
 
-    cipher = _get_cipher()
+    salt = _get_or_create_bio_salt(username)
+    cipher = _get_cipher(salt)
 
     with open(path, "rb") as f:
         encrypted = f.read()
@@ -179,8 +283,6 @@ def enroll_faces(username: str, images: dict):
 
         _save_embeddings(username, embeddings)
     finally:
-        # Se ejecuta siempre, incluso si DeepFace lanza una excepción, para no
-        # dejar imágenes biométricas temporales sin cifrar en disco.
         for path in temp_paths:
             if os.path.exists(path):
                 os.remove(path)
@@ -192,6 +294,7 @@ def verify_face(username: str, image_base64: str):
 
 def verify_face_detailed(username: str, image_base64: str):
     temp_path = None
+    t_start = time.time()
 
     try:
         stored = _load_embeddings(username)
@@ -205,24 +308,38 @@ def verify_face_detailed(username: str, image_base64: str):
         avg_distance = np.mean(distances)
 
         threshold = current_app.config.get("FACE_MATCH_THRESHOLD", 0.35)
+        current_app.logger.info("verify_face_detailed total: %.2f s", time.time() - t_start)
 
         return {
-            "verified": avg_distance < threshold,
+            "verified": bool(avg_distance < threshold),
             "distance": float(avg_distance),
             "threshold": threshold
         }
 
+    except ValueError as e:
+        # Errores esperables y con mensaje útil: rostro no detectado,
+        # recortado, baja confianza, o posible spoof.
+        current_app.logger.warning("Verificación facial rechazada: %s", e)
+        return {
+            "verified": False,
+            "error": str(e)
+        }
+
     except Exception:
+        current_app.logger.exception("Fallo en verify_face_detailed")
         return {
             "verified": False,
             "error": "Verification failed"
         }
     finally:
-        # try/finally en vez de os.remove() en el "camino feliz": si
-        # _get_embedding lanza excepción, el archivo temporal (biométrico)
-        # quedaba huérfano y sin cifrar en disco.
         if temp_path and os.path.exists(temp_path):
-            os.remove(temp_path)
+            try:
+                os.remove(temp_path)
+            except OSError:
+                current_app.logger.warning(
+                    "No se pudo eliminar el archivo temporal %s (puede seguir en uso)",
+                    temp_path,
+                )
 
 def is_enrolled(username: str) -> bool:
     return os.path.exists(_get_embeddings_path(username))

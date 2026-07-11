@@ -1,3 +1,5 @@
+HEAD
+
 # LANDA Bank
 
 A lightweight, mobile-friendly banking prototype built with Flask, SQLite, and Bootstrap 5. Features optional facial recognition via DeepFace pretrained models and installable PWA support.
@@ -99,12 +101,12 @@ pytest --cov=app --cov-report=html
 
 Test categories:
 
-| Test file | What it covers |
-|---|---|
-| `tests/test_auth.py` | Registration, login, logout, validation, edge cases |
-| `tests/test_routes.py` | Protected routes, settings, face API endpoints |
-| `tests/test_security.py` | Password hashing unit tests |
-| `tests/test_face.py` | Face service edge cases |
+| Test file                | What it covers                                      |
+| ------------------------ | --------------------------------------------------- |
+| `tests/test_auth.py`     | Registration, login, logout, validation, edge cases |
+| `tests/test_routes.py`   | Protected routes, settings, face API endpoints      |
+| `tests/test_security.py` | Password hashing unit tests                         |
+| `tests/test_face.py`     | Face service edge cases                             |
 
 ## DeepFace Setup
 
@@ -147,16 +149,17 @@ The first call to `DeepFace.represent()` will download the Facenet512 model auto
 
 ## Security Considerations
 
-| Area | Implementation |
-|---|---|
-| Passwords | bcrypt hashing via Werkzeug |
-| Sessions | Signed cookies (Flask SECRET_KEY) |
-| Face data | Stored locally as pickled numpy arrays |
+| Area        | Implementation                                 |
+| ----------- | ---------------------------------------------- |
+| Passwords   | bcrypt hashing via Werkzeug                    |
+| Sessions    | Signed cookies (Flask SECRET_KEY)              |
+| Face data   | Stored locally as pickled numpy arrays         |
 | Face images | Deleted immediately after embedding extraction |
-| Audit log | All auth events logged with IP and timestamp |
-| SQLite | Database in `instance/` (gitignored) |
+| Audit log   | All auth events logged with IP and timestamp   |
+| SQLite      | Database in `instance/` (gitignored)           |
 
 **Before deploying:**
+
 - Change `SECRET_KEY` in `.env` to a strong random value
 - Set `DATABASE_URL` to a persistent path
 - Consider rate limiting on login endpoints
@@ -164,13 +167,13 @@ The first call to `DeepFace.represent()` will download the Facenet512 model auto
 
 ## Software Quality Goals
 
-| Goal | Approach |
-|---|---|
-| Testability | Pytest with fixtures, SQLite in-memory test DB |
+| Goal            | Approach                                            |
+| --------------- | --------------------------------------------------- |
+| Testability     | Pytest with fixtures, SQLite in-memory test DB      |
 | Maintainability | Flat module structure, clear separation of concerns |
-| Simplicity | No microservices, no Docker, no build step |
-| Accessibility | Bootstrap 5 semantic HTML, responsive design |
-| Auditability | Every auth action logged with timestamp and IP |
+| Simplicity      | No microservices, no Docker, no build step          |
+| Accessibility   | Bootstrap 5 semantic HTML, responsive design        |
+| Auditability    | Every auth action logged with timestamp and IP      |
 
 ## Future Improvements
 
@@ -185,4 +188,6 @@ The first call to `DeepFace.represent()` will download the Facenet512 model auto
 
 ## License
 
-University project — educational purposes only. Not intended for production banking use.
+# University project — educational purposes only. Not intended for production banking use.
+
+# Landa-Banking-System

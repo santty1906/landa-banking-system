@@ -41,6 +41,8 @@ class Config:
     FACE_ENFORCE_DETECTION = os.environ.get("FACE_ENFORCE_DETECTION", "true").lower() == "true"
     FACE_TARGET_SIZE = int(os.environ.get("FACE_TARGET_SIZE", "224"))
     FACE_MIN_ANGLE_DISTANCE = float(os.environ.get("FACE_MIN_ANGLE_DISTANCE", "0.15"))
+    FACE_MIN_CONFIDENCE = float(os.environ.get("FACE_MIN_CONFIDENCE", "0.80"))
+    FACE_ANTI_SPOOFING = os.environ.get("FACE_ANTI_SPOOFING", "true").lower() == "true"
 
     # --- Sesiones / cookies (ISO 27001 A.8.5 - Autenticación segura) ---
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true"
