@@ -33,3 +33,19 @@ def test_password_with_special_chars():
     pwd = "p@$$w0rd!#$"
     h = hash_password(pwd)
     assert verify_password(pwd, h) is True
+
+def test_hash_device_token_consistent():
+    from app.security import _hash_device_token
+    assert _hash_device_token("abc") == _hash_device_token("abc")
+
+
+def test_hash_device_token_differs():
+    from app.security import _hash_device_token
+    assert _hash_device_token("abc") != _hash_device_token("xyz")
+
+
+def test_is_trusted_device_no_cookie(app):
+    with app.test_request_context("/"):
+        from app.security import is_trusted_device
+        assert is_trusted_device(999) is False
+

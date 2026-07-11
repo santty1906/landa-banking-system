@@ -127,3 +127,52 @@ def test_offline_page(client):
     resp = client.get("/offline")
     assert resp.status_code == 200
     assert b"Offline" in resp.data or b"offline" in resp.data
+
+def test_trusted_device_flow(client, app):
+    with app.app_context():
+        from app.models import User, db
+        from app.security import hash_password
+
+        user = User(
+            username="trustuser",
+            email="trust@example.com",
+            password_hash=hash_password("Testpass123"),
+            face_enrolled=True,
+        )
+        db.session.add(user)
+        db.session.commit()
+
+    with client:
+        resp = client.get("/api/face/check-user?username=trustuser")
+        assert resp.json["enrolled"] is False
+
+        login_resp = client.post("/auth/login", data={
+            "username": "trustuser",
+            "password": "Testpass123",
+        })
+        assert login_resp.status_code == 302
+
+        resp2 = client.get("/api/face/check-user?username=trustuser")
+        assert resp2.json["enrolled"] is True
+
+
+def test_face_login_verify_rejects_untrusted_device(client, app):
+    with app.app_context():
+        from app.models import User, db
+        from app.security import hash_password
+
+        user = User(
+            username="untrusteduser",
+            email="untrusted@example.com",
+            password_hash=hash_password("Testpass123"),
+            face_enrolled=True,
+        )
+        db.session.add(user)
+        db.session.commit()
+
+    resp = client.post("/api/face/login-verify", json={
+        "username": "untrusteduser",
+        "image": "data:image/jpeg;base64,test",
+    })
+    assert resp.status_code == 403
+

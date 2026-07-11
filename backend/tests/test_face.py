@@ -23,6 +23,57 @@ def test_is_enrolled_no_user(app):
         assert is_enrolled("nonexistent_user") is False
 
 
+def test_check_face_framing_low_confidence(app, tmp_path):
+    import cv2
+    import numpy as np
+    from app.face_service import _check_face_framing
+
+    img_path = str(tmp_path / "face.jpg")
+    cv2.imwrite(img_path, (np.ones((100, 100, 3)) * 255).astype("uint8"))
+
+    with app.app_context():
+        try:
+            _check_face_framing(
+                img_path, {"x": 20, "y": 20, "w": 60, "h": 60}, face_confidence=0.5
+            )
+            assert False, "Should have raised ValueError"
+        except ValueError as e:
+            assert "claridad" in str(e)
+
+
+def test_check_face_framing_touches_edge(app, tmp_path):
+    import cv2
+    import numpy as np
+    from app.face_service import _check_face_framing
+
+    img_path = str(tmp_path / "face.jpg")
+    cv2.imwrite(img_path, (np.ones((100, 100, 3)) * 255).astype("uint8"))
+
+    with app.app_context():
+        try:
+            _check_face_framing(
+                img_path, {"x": 0, "y": 10, "w": 60, "h": 60}, face_confidence=0.95
+            )
+            assert False, "Should have raised ValueError"
+        except ValueError as e:
+            assert "recortado" in str(e)
+
+
+def test_check_face_framing_valid(app, tmp_path):
+    import cv2
+    import numpy as np
+    from app.face_service import _check_face_framing
+
+    img_path = str(tmp_path / "face.jpg")
+    cv2.imwrite(img_path, (np.ones((100, 100, 3)) * 255).astype("uint8"))
+
+    with app.app_context():
+        _check_face_framing(
+            img_path, {"x": 20, "y": 20, "w": 60, "h": 60}, face_confidence=0.95
+        )
+        # No debe lanzar ninguna excepción
+
+
 def test_is_enrolled_empty_username(app):
     with app.app_context():
         assert is_enrolled("") is False
@@ -154,3 +205,66 @@ def test_enroll_faces_saves_payload_structure(app, tmp_path):
         assert "model" in loaded
         assert len(loaded["angles"]) == 3
         assert len(loaded["averaged"]) == 3
+
+def test_derive_user_key_deterministic(app):
+    import os as _os
+    from app.face_service import _derive_user_key
+
+    with app.app_context():
+        master = _os.urandom(32)
+        salt = _os.urandom(16)
+        assert _derive_user_key(master, salt) == _derive_user_key(master, salt)
+
+
+def test_derive_user_key_differs_per_salt(app):
+    import os as _os
+    from app.face_service import _derive_user_key
+
+    with app.app_context():
+        master = _os.urandom(32)
+        key1 = _derive_user_key(master, _os.urandom(16))
+        key2 = _derive_user_key(master, _os.urandom(16))
+        assert key1 != key2
+
+
+def test_get_or_create_bio_salt_persists(app, db):
+    from app.models import User
+    from app.face_service import _get_or_create_bio_salt
+
+    with app.app_context():
+        user = User(username="saltuser", email="salt@example.com", password_hash="x")
+        db.session.add(user)
+        db.session.commit()
+
+        salt1 = _get_or_create_bio_salt("saltuser")
+        salt2 = _get_or_create_bio_salt("saltuser")
+        assert salt1 == salt2
+
+
+def test_get_or_create_bio_salt_missing_user(app):
+    from app.face_service import _get_or_create_bio_salt
+
+    with app.app_context():
+        try:
+            _get_or_create_bio_salt("nobody_here")
+            assert False, "Should have raised ValueError"
+        except ValueError as e:
+            assert "not found" in str(e).lower()
+
+
+def test_save_and_load_embeddings_per_user_key(app, db, tmp_path):
+    from app.models import User
+    from app.face_service import _save_embeddings, _load_embeddings
+
+    with app.app_context():
+        app.config["UPLOAD_FOLDER"] = str(tmp_path)
+
+        user = User(username="cryptouser", email="crypto@example.com", password_hash="x")
+        db.session.add(user)
+        db.session.commit()
+
+        embeddings = {"frontal": [1.0, 2.0, 3.0]}
+        _save_embeddings("cryptouser", embeddings)
+
+        loaded = _load_embeddings("cryptouser")
+        assert loaded["frontal"] == embeddings["frontal"]

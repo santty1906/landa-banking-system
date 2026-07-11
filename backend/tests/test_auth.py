@@ -84,8 +84,18 @@ def test_short_password_rejected(client):
         "confirm_password": "ab",
     }, follow_redirects=True)
     assert resp.status_code == 200
-    assert b"at least 6 characters" in resp.data
+    assert b"at least 8 characters" in resp.data
 
+
+def test_password_without_digits_rejected(client):
+    resp = client.post("/auth/register", data={
+        "username": "user3",
+        "email": "user3@example.com",
+        "password": "onlyletters",
+        "confirm_password": "onlyletters",
+    }, follow_redirects=True)
+    assert resp.status_code == 200
+    assert b"letters and numbers" in resp.data
 
 def test_duplicate_email_registration(client, db, registered_user):
     resp = client.post("/auth/register", data={
@@ -96,3 +106,4 @@ def test_duplicate_email_registration(client, db, registered_user):
     }, follow_redirects=True)
     assert resp.status_code == 200
     assert b"already registered" in resp.data
+

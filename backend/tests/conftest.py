@@ -1,5 +1,4 @@
 import pytest
-
 from app.app import create_app
 from app.models import User, db as _db
 from app.config import Config
@@ -8,6 +7,7 @@ from app.config import Config
 class TestConfig(Config):
     TESTING = True
     SECRET_KEY = "test-secret"
+    WTF_CSRF_ENABLED = False
 
 
 @pytest.fixture
@@ -31,6 +31,7 @@ def db(app):
 def registered_user(app):
     with app.app_context():
         from app.security import hash_password
+
         user = User(
             username="testuser",
             email="test@example.com",
