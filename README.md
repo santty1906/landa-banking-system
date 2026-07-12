@@ -36,6 +36,7 @@ Full architecture documentation: [docs/architecture.md](docs/architecture.md)
 ## Project Structure
 
 ```
+backend/
 ├── app/                    # Application package
 │   ├── app.py              # Flask app factory + security headers
 │   ├── config.py           # Configuration (fails fast on invalid secrets)
@@ -53,6 +54,12 @@ Full architecture documentation: [docs/architecture.md](docs/architecture.md)
 ├── Dockerfile
 └── pytest.ini
 ```
+
+## Frontend (Flutter) — not part of this submission
+
+This repository also contains a `frontend/` folder with a Flutter project. It was built in a single initial commit and never continued: it has a working-looking authentication flow (login, splash, home pages, clean architecture, planned biometric auth support), but no session management or dashboard screen, so it doesn't connect to the rest of the banking functionality. It has not been compiled or run since that first commit.
+
+**This folder is not part of the evaluated deliverable.** The actual, functional application is the Flask web app described in this README. See [`frontend/README.md`](frontend/README.md) for details if you're curious about its state.
 
 ## Installation
 
