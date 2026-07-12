@@ -112,17 +112,7 @@ python run.py
 
 Abre el navegador en `http://localhost:5000`.
 
-## 5. Frontend (Flutter)
-
-```bash
-cd frontend
-flutter pub get
-flutter run
-```
-
-> Estos dos comandos vienen de la guía original del equipo. No se verificaron durante la ronda de corrección de código de esta sesión (que se enfocó por completo en el backend), así que si algo no funciona aquí, probablemente necesite su propia revisión aparte.
-
-## 6. (Opcional) Probar Face ID desde un celular
+## 5. (Opcional) Probar Face ID desde un celular
 
 Face ID necesita HTTPS para acceder a la cámara (no funciona con la IP local de tu red Wi-Fi). Para probarlo desde un teléfono:
 
