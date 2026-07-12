@@ -1,5 +1,3 @@
-HEAD
-
 # LANDA Bank
 
 A lightweight, mobile-friendly banking prototype built with Flask, SQLite, and Bootstrap 5. Features optional facial recognition via DeepFace pretrained models and installable PWA support.
@@ -188,6 +186,5 @@ The first call to `DeepFace.represent()` will download the Facenet512 model auto
 
 ## License
 
-# University project — educational purposes only. Not intended for production banking use.
+University project — educational purposes only. Not intended for production banking use.
 
-# Landa-Banking-System
